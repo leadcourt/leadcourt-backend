@@ -14,11 +14,11 @@ const authenticateJWT = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    const decodedRaw = jwt.decode(token, { complete: true });
-    const payload = decodedRaw?.payload || {};
-    const now = Math.floor(Date.now() / 1000);
-    const isExpired = payload.exp && payload.exp < now;
-    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    // const decodedRaw = jwt.decode(token, { complete: true });
+    // const payload = decodedRaw?.payload || {};
+    // const now = Math.floor(Date.now() / 1000);
+    // const isExpired = payload.exp && payload.exp < now;
+    // const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
     // console.log("─────────────────────────────");
     // console.log("AUTH DEBUG");
@@ -35,12 +35,12 @@ const authenticateJWT = async (req, res, next) => {
     // console.log("→ X-Internal-Call:", req.headers["x-internal-call"] || "false");
     // console.log("─────────────────────────────");
 
-    if (isExpired) {
-      return res.status(401).json({
-        success: false,
-        message: "Token expired. Please re-authenticate.",
-      });
-    }
+    // if (isExpired) {
+    //   return res.status(401).json({
+    //     success: false,
+    //     message: "Token expired. Please re-authenticate.",
+    //   });
+    // }
 
     const decodedToken = await auth.verifyIdToken(token);
 

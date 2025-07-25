@@ -15,6 +15,17 @@ const swaggerSpec = require('./config/swagger');
 const swaggerUi = require('swagger-ui-express');
 const connectDB = require('./config/mongo');
 
+
+// collabCreditsRoutes
+const collaboratorRoute = require('./routes/collaboratorRoute');
+
+const collabCreditsRoutes = require('./routes/collab/collabCreditsRoutes');
+const collabFilterRoute = require('./routes/collab/collabFilterRoute');
+const collabListRoute = require('./routes/collab/collabListRoute');
+const collabHubspotRoutes = require('./routes/collab/collabHubspot');
+
+// Collaboration
+
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.set('trust proxy', true);
@@ -33,6 +44,12 @@ app.use('/api/sabpaisa', sabpaisaRoutes);
 app.use('/api/integrations/hubspot', hubspotRoutes);
 app.use('/api/location', locationRoutes);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+app.use('/api/collaboration/', collaboratorRoute);
+app.use('/api/collaboration/credits', collabCreditsRoutes);
+app.use('/api/collaboration/filter', collabFilterRoute);
+app.use('/api/collaboration/list', collabListRoute);
+app.use('/api/collaboration/integrations/hubspot', collabHubspotRoutes);
 
 app.get('/swagger.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
