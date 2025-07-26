@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { getListSummary, storeList, showList, createEmptyList, queueExportJob, renameList, deleteList } = require('../controllers/listController');
-const { collabAuthenticateJWT } = require('../middleware/collabAuth');
+const { getListSummary, storeList, showList, createEmptyList, queueExportJob, renameList, deleteList } = require('../../controllers/listController');
+const { collabAuthenticateJWT } = require('../../middleware/collabAuth');
 
 /**
  * @swagger

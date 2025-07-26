@@ -6,9 +6,9 @@ const {
   getLinkedInUrl,
   searchOptions,
   getDesignations
-} = require('../controllers/filterController');
+} = require('../../controllers/filterController');
 // const { collabAuthenticateJWT } = require('../middleware/auth');
-const { collabAuthenticateJWT } = require('../middleware/collabAuth');
+const { collabAuthenticateJWT } = require('../../middleware/collabAuth');
 
 /**
  * @swagger

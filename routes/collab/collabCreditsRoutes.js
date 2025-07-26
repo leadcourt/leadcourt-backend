@@ -1,7 +1,7 @@
 const express = require('express');
-const Credits = require('../models/Credits');
+const Credits = require('../../models/Credits');
 const router = express.Router();
-const { collabAuthenticateJWT } = require('../middleware/collabAuth');
+const { collabAuthenticateJWT } = require('../../middleware/collabAuth');
 
 router.get('/total', collabAuthenticateJWT, async (req, res) => {
   const { uid: userId } = req.user;
