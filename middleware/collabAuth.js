@@ -43,16 +43,16 @@ const collabAuthenticateJWT = async (req, res, next) => {
         }
 
 
-        const collabTeam = await admin.auth().getUser(collab.collaborator);
+        const collabOwner = await admin.auth().getUser(collab.owner);
         
         
         req.user = {
-            uid: collabTeam.uid,
-            email: collabTeam.email || null,
-            emailVerified: collabTeam.email_verified || false,
-            name: collabTeam.name || null,
-            picture: collabTeam.picture || null,
-            role: collabTeam.role || "user",
+            uid: collabOwner.uid,
+            email: collabOwner.email || null,
+            emailVerified: collabOwner.email_verified || false,
+            name: collabOwner.name || null,
+            picture: collabOwner.picture || null,
+            role: collabOwner.role || "user",
         }
 
     } else {
