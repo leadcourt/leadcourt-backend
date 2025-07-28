@@ -35,3 +35,4 @@ module.exports = {
   admin: firebaseAdmin,
   auth: firebaseAdmin.auth(),
 };
+

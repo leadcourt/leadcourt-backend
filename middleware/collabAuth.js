@@ -43,7 +43,7 @@ const collabAuthenticateJWT = async (req, res, next) => {
         }
 
 
-        const collabTeam = await admin.auth().getUser(collab.collaborator);
+        const collabTeam = await auth().getUser(collab.collaborator);
         
         
         req.user = {
