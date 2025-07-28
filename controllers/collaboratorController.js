@@ -13,6 +13,8 @@ exports.sendInvite = async (req, res) => {
 
   const permission = role_permission || 'viewer';
 
+  console.log('\n\n\nin the body', req.body)
+
 
   
   console.log('In the collab invitation.js uid\n\n', owner);

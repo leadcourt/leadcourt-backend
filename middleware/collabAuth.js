@@ -1,4 +1,5 @@
 const { auth } = require("../config/firebase");
+const mongoose = require('mongoose');
 
 const collabAuthenticateJWT = async (req, res, next) => {
   try {
