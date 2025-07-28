@@ -1,4 +1,4 @@
-const { auth } = require("../config/firebase");
+const { auth, admin } = require("../config/firebase");
 const mongoose = require('mongoose');
 const Collaborator = require('../models/collaborator');
 
@@ -43,7 +43,7 @@ const collabAuthenticateJWT = async (req, res, next) => {
         }
 
 
-        const collabTeam = await auth().getUser(collab.collaborator);
+        const collabTeam = await admin.auth().getUser(collab.collaborator);
         
         
         req.user = {
