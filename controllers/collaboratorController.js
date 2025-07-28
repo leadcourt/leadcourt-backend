@@ -30,8 +30,8 @@ exports.sendInvite = async (req, res) => {
     }
 
 
-    // console.log('Target User ID:', targetUser.uid);
-    // console.log('Owner User ID:', owner.uid);
+    console.log('Target User ID:', targetUser.uid);
+    console.log('Owner User ID:', owner.uid);
     if (targetUser.uid == ownerUser.uid) {
       return res.status(400).json({ message: 'You cannot invite yourself' });
     }
