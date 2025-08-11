@@ -101,12 +101,13 @@ exports.exportToZoho = async (req, res) => {
 
 
 
+
 exports.checkZohoConnection = async (req, res) => {
   try {
     const Zoho = await ZohoModel.findById(req.user.id);
     
     if (!Zoho?.refresh_token) {
-      return res.json({ active: false, reason: 'no_token' });
+      return res.json({ connected: false, reason: 'no_token' });
     }
 
     try {
@@ -116,9 +117,9 @@ exports.checkZohoConnection = async (req, res) => {
           Authorization: `Zoho-oauthtoken ${Zoho.access_token}`
         }
       });
-      return res.json({ active: true });
+      return res.json({ connected: true });
     } catch (err) {
-      return res.json({ active: false, reason: 'token_invalid_or_expired' });
+      return res.json({ connected: false, reason: 'token_invalid_or_expired' });
     }
   } catch (error) {
     console.error('Zoho check error:', error);
