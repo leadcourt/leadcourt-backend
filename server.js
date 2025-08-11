@@ -15,6 +15,8 @@ const swaggerSpec = require('./config/swagger');
 const swaggerUi = require('swagger-ui-express');
 const connectDB = require('./config/mongo');
 
+const zohoRoutes = require('./zoho/zohoRoute');
+
 
 // collabCreditsRoutes
 const collaboratorRoute = require('./routes/collaboratorRoute');
@@ -50,6 +52,11 @@ app.use('/api/collaboration/credits', collabCreditsRoutes);
 app.use('/api/collaboration/filter', collabFilterRoute);
 app.use('/api/collaboration/list', collabListRoute);
 app.use('/api/collaboration/integrations/hubspot', collabHubspotRoutes);
+
+// Zoho link
+app.use('/api/integrations/zoho', zohoRoutes);
+
+
 
 app.get('/swagger.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');

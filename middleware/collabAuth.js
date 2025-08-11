@@ -13,6 +13,7 @@ const collabAuthenticateJWT = async (req, res, next) => {
         message: "Access denied. No token provided or invalid format.",
       });
     }
+    // ladisamuel00's JWT
 
     const token = authHeader.split(" ")[1];
 
@@ -27,11 +28,15 @@ const collabAuthenticateJWT = async (req, res, next) => {
         
         const collab = await Collaborator.findById({ _id: collaborationId })
     
+
+          
+
+
         if (!collab) {
             return res.status(404).json({ message: 'Collaboration not found.' });
         }
     
-        
+        // collab.collaborator = ladisamuel00
         // Ensure the request user is the collaborator
         if (String(collab.collaborator) !== String(decodedToken.uid)) {
             return res.status(403).json({ message: 'You are not authorized for this collaboration.' });

@@ -61,6 +61,8 @@ exports.sendInvite = async (req, res) => {
       existing.invitedAt = new Date();
       await existing.save();
 
+      // send email for another invite
+
       return res.status(200).json({ message: 'Invite re-sent successfully' });
     }
     // console.log('No existing collaboration found, creating a new one');
@@ -85,6 +87,8 @@ exports.sendInvite = async (req, res) => {
     });
 
     await newCollab.save();
+
+    // send email for a new invite
 
     return res.status(201).json({ message: 'Invite sent successfully' });
   } catch (err) {
@@ -201,14 +205,12 @@ exports.respondToInvite = async (req, res) => {
 
 exports.getCollaborators = async (req, res) => {
   const user = req.user;
-  console.log('In the getCollaborators request user\n\n', user);
   try {
     const collaborators = await Collaborator.find({
       owner: user.uid
     })
     // .lean();
 
-    console.log('Collaborators:', collaborators);
     return res.status(200).json({ collaborators });
   } catch (err) {
     console.error('Get Collaborators Error:', err);

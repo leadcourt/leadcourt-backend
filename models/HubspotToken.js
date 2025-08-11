@@ -8,3 +8,4 @@ const hubspotTokenSchema = new mongoose.Schema({
 }, { _id: false });
 
 module.exports = mongoose.model('HubspotToken', hubspotTokenSchema);
+
