@@ -9,9 +9,13 @@ router.get('/auth-url', authenticateJWT, zohoController.getZohoAuthUrl);
 router.get('/callback', authenticateJWT, zohoController.zohoCallback);
 
 // export endpoint
+router.post('/exchange-code', authenticateJWT, zohoController.exchangeZohoAuthCode);
+
 router.post('/export', authenticateJWT, zohoController.exportToZoho);
 
 
 router.get('/check', authenticateJWT, zohoController.checkZohoConnection);
 
 module.exports = router;
+
+// /
