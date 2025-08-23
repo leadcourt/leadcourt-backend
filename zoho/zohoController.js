@@ -174,9 +174,9 @@ exports.exchangeZohoAuthCode = async (req, res) => {
 exports.checkZohoConnection = async (req, res) => {
   console.log('In zhoho check');
   try {
-    const Zoho = await ZohoModel.findById(req.user.id);
+    const Zoho = await ZohoModel.findById(req.user.uid);
 
-    console.log('req.user.id', req.user.id)
+    console.log('req.user.uid', req.user.uid)
     console.log('Zoho', Zoho)
 
     if (!Zoho?.refresh_token) {
