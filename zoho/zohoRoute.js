@@ -6,7 +6,7 @@ const zohoController = require('./zohoController');
 // optional: return URL to start OAuth
 router.get('/auth-url', authenticateJWT, zohoController.getZohoAuthUrl);
 
-router.get('/callback', authenticateJWT, zohoController.zohoCallback);
+router.post('/callback', authenticateJWT, zohoController.zohoCallback);
 
 // export endpoint
 router.post('/exchange-code', authenticateJWT, zohoController.exchangeZohoAuthCode);

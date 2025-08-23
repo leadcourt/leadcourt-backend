@@ -14,7 +14,15 @@ const TransactionSchema = new mongoose.Schema({
   subscriptionType: {
     type: String,
     required: true,
-    enum: ['STARTER', 'PRO', 'BUSINESS','CUSTOM']
+    enum: [
+      'STARTER',
+      'PRO',
+      'BUSINESS',
+      'CUSTOM',
+      'STARTER_ANNUAL',
+      'PRO_ANNUAL',
+      'BUSINESS_ANNUAL'
+    ]
   },
   payerId: {
     type: String,

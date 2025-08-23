@@ -28,10 +28,13 @@ exports.getZohoAuthUrl = (req, res) => {
  * This route is called by frontend redirect with ?code=...
  */
 exports.zohoCallback = async (req, res) => {
+  
   try {
     // Expect frontend to call this endpoint and include Firebase auth
-    const code = req.query.code;
-    if (!code) return res.status(400).json({ message: "Missing code" });
+    const { code } = req.body; 
+
+    // const code = req.query.code;
+    if (!code) return res.status(400).json({ message: 'Missing code' });
 
     // req.user provided by authenticateJWT middleware
     const uid = req.user.uid;
@@ -47,18 +50,14 @@ exports.zohoCallback = async (req, res) => {
       {
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
-        expires_at,
+        expires_at: expires_at,
         connectedAt: new Date(),
         // region: tokenData.api_domain || process.env.ZOHO_API_BASE
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    // Redirect or respond — frontend can interpret result
-    // If this is a frontend redirect flow, you may redirect back to the frontend:
-    return res.redirect(
-      `${process.env.FRONTEND_BASE}/zoho/connected?status=success`
-    );
+    return res.json({ success: true, message: 'Zoho connected' });
     // Or respond with JSON:
     // return res.json({ success: true, user });
   } catch (err) {
@@ -173,6 +172,7 @@ exports.exchangeZohoAuthCode = async (req, res) => {
 };
 
 exports.checkZohoConnection = async (req, res) => {
+  console.log('In zhoho check');
   try {
     const Zoho = await ZohoModel.findById(req.user.id);
 

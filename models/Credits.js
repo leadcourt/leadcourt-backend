@@ -5,9 +5,12 @@ const CreditsSchema = new mongoose.Schema({
   credits: { type: Number, default: 500 },
   activePlan: {
     type: String,
-    enum: ['STARTER', 'PRO', 'BUSINESS', null],
-    default: null
+    enum: ['FREE', 'STARTER', 'PRO', 'BUSINESS', 'CUSTOM', null],
+    default: 'FREE'
   },
+  expiresAt: { type: Date, default: null },
+  starterRemainingDays: { type: Number, default: 0 },
+  proRemainingDays: { type: Number, default: 0 },
   lastUpdated: { type: Date, default: Date.now }
 });
 
