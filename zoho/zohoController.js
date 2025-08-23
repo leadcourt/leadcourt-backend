@@ -179,21 +179,21 @@ exports.checkZohoConnection = async (req, res) => {
     console.log('req.user.uid', req.user.uid)
     console.log('Zoho', Zoho)
 
-    if (!Zoho?.refresh_token) {
+    if (!Zoho?.refreshToken) {
       return res.json({ connected: false, reason: "no_token" });
     }
+    return res.json({ connected: true });
 
-    try {
-      // Optional: test API call to Zoho
-      await axios.get("https://www.zohoapis.com/crm/v2/users", {
-        headers: {
-          Authorization: `Zoho-oauthtoken ${Zoho.access_token}`,
-        },
-      });
-      return res.json({ connected: true });
-    } catch (err) {
-      return res.json({ connected: false, reason: "token_invalid_or_expired" });
-    }
+    // try {
+    //   // Optional: test API call to Zoho
+    //   await axios.get("https://www.zohoapis.com/crm/v2/users", {
+    //     headers: {
+    //       Authorization: `Zoho-oauthtoken ${Zoho.accessToken}`,
+    //     },
+    //   });
+    // } catch (err) {
+    //   return res.json({ connected: false, reason: "token_invalid_or_expired" });
+    // }
   } catch (error) {
     console.error("Zoho check error:", error);
     res.status(500).json({ message: "Internal server error" });
