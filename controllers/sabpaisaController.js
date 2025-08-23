@@ -1,9 +1,10 @@
 const crypto = require('crypto');
 const Transaction = require('../models/Transactions');
 const Credits = require('../models/Credits');
-
-const AES_KEY_BASE64 = process.env.SABPAISA_AUTH_KEY;
-const HMAC_KEY_BASE64 = process.env.SABPAISA_AUTH_IV;
+const sendTelegramAlert = require('../services/telegramAlert');
+const { handlePlanPurchase } = require('../services/purchasePlan');
+const TELEGRAM_GROUP_ID_FAILURE = process.env.TELEGRAM_GROUP_ID_FAILURE;
+const TELEGRAM_GROUP_ID_SUCCESS = process.env.TELEGRAM_GROUP_ID_SUCCESS;
 
 const IV_SIZE = 12;
 const TAG_SIZE = 16;
@@ -18,17 +19,15 @@ function hexToBuffer(hex) {
 }
 
 function encrypt(plaintext) {
-  const aesKey = Buffer.from(AES_KEY_BASE64, 'base64');
-  const hmacKey = Buffer.from(HMAC_KEY_BASE64, 'base64');
+  const aesKey = Buffer.from(process.env.SABPAISA_AUTH_KEY, 'base64');
+  const hmacKey = Buffer.from(process.env.SABPAISA_AUTH_IV, 'base64');
   const iv = crypto.randomBytes(IV_SIZE);
-
   const cipher = crypto.createCipheriv('aes-256-gcm', aesKey, iv, { authTagLength: TAG_SIZE });
   const encrypted = Buffer.concat([
     cipher.update(Buffer.from(plaintext, 'utf8')),
     cipher.final(),
   ]);
   const tag = cipher.getAuthTag();
-
   const encryptedMessage = Buffer.concat([iv, encrypted, tag]);
   const hmac = crypto.createHmac('sha384', hmacKey).update(encryptedMessage).digest();
   const finalMessage = Buffer.concat([hmac, encryptedMessage]);
@@ -37,26 +36,27 @@ function encrypt(plaintext) {
 }
 
 function decrypt(hexCiphertext) {
-  const aesKey = Buffer.from(AES_KEY_BASE64, 'base64');
-  const hmacKey = Buffer.from(HMAC_KEY_BASE64, 'base64');
+  const aesKey = Buffer.from(process.env.SABPAISA_AUTH_KEY, 'base64');
+  const hmacKey = Buffer.from(process.env.SABPAISA_AUTH_IV, 'base64');
 
   const fullMessage = hexToBuffer(hexCiphertext);
   const hmacReceived = fullMessage.slice(0, HMAC_SIZE);
   const encryptedData = fullMessage.slice(HMAC_SIZE);
   const hmacComputed = crypto.createHmac('sha384', hmacKey).update(encryptedData).digest();
-
   if (!crypto.timingSafeEqual(hmacReceived, hmacComputed)) {
     throw new Error('HMAC validation failed - data may be tampered');
   }
-
   const iv = encryptedData.slice(0, IV_SIZE);
   const tag = encryptedData.slice(encryptedData.length - TAG_SIZE);
   const ciphertext = encryptedData.slice(IV_SIZE, encryptedData.length - TAG_SIZE);
-
   const decipher = crypto.createDecipheriv('aes-256-gcm', aesKey, iv, { authTagLength: TAG_SIZE });
   decipher.setAuthTag(tag);
 
-  const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  const decrypted = Buffer.concat([
+    decipher.update(ciphertext), 
+    decipher.final()
+  ]);
+  
   return decrypted.toString('utf8');
 }
 
@@ -92,8 +92,6 @@ exports.initiateSabPaisaPayment = async (req, res) => {
       transDate: transDate,
     });
     const requestString = params.toString();
-
-    console.log("Request string before encryption:", requestString);
     const requiredEnvVars = {
   SABPAISA_CLIENT_CODE: process.env.SABPAISA_CLIENT_CODE,
   SABPAISA_USERNAME: process.env.SABPAISA_USERNAME,
@@ -157,10 +155,17 @@ exports.handleSabPaisaReturn = async (req, res) => {
       });
 
       const statusCode = responseMap['statusCode'];
-      const finalStatus = statusCode === '0000' ? 'COMPLETED' : 'FAILED';
-      // Fixed: Use correct parameter name from documentation
-      const clientTxnId = responseMap['clientTxId']; // Note: clientTxId not clientTxnId
-      const txnAmount = responseMap['amount'];
+      const clientTxnId = responseMap['clientTxnId'];
+      const txnAmount = parseFloat(responseMap['amount']);
+
+      let finalStatus;
+      switch (statusCode) {
+        case '0000': finalStatus = 'COMPLETED'; break;
+        case '0300': finalStatus = 'FAILED'; break;
+        case '0100': finalStatus = 'NOT_COMPLETED'; break;
+        case '0200': finalStatus = 'ABORTED'; break;
+        default: finalStatus = 'UNKNOWN';
+      }
 
       const transaction = await Transaction.findOne({ transactionId: clientTxnId });
       if (!transaction) {
@@ -168,44 +173,134 @@ exports.handleSabPaisaReturn = async (req, res) => {
         return res.status(404).send('Transaction not found');
       }
 
-      transaction.status = finalStatus;
+      transaction.status = finalStatus === 'COMPLETED' ? 'COMPLETED' : 'FAILED';
       transaction.payerId = responseMap['sabpaisaTxnId'] || 'N/A';
       transaction.rawData = responseMap;
       transaction.webhookEvent = 'RETURN';
       await transaction.save();
 
       if (finalStatus === 'COMPLETED') {
-        const subscriptionType = transaction.subscriptionType;
+        const subscriptionType = transaction.subscriptionType?.toUpperCase();
+        const isAnnual = subscriptionType?.endsWith('_ANNUAL');
+        const basePlan = isAnnual ? subscriptionType.replace('_ANNUAL', '') : subscriptionType;
+
         let credits = 0;
-        if (subscriptionType === 'STARTER') credits = 3000;
-        else if (subscriptionType === 'PRO') credits = 10000;
-        else if (subscriptionType === 'BUSINESS') credits = 15000;
-        else credits = Math.floor(parseFloat(txnAmount) * 1.162790698);
+        let durationDays = isAnnual ? 365 : 30;
 
-        const updateData = {
-          $inc: { credits },
-          $set: { lastUpdated: new Date() },
-        };
+        if (basePlan === 'STARTER') credits = isAnnual ? 3000 * 12 : 3000;
+        else if (basePlan === 'PRO') credits = isAnnual ? 10000 * 12 : 10000;
+        else if (basePlan === 'BUSINESS') credits = isAnnual ? 15000 * 12 : 15000;
+        else credits = Math.floor(txnAmount * 1.162790698); // CUSTOM
 
-        if (subscriptionType !== 'CUSTOM') {
-          updateData.$set.activePlan = subscriptionType;
+        if (['STARTER', 'PRO', 'BUSINESS'].includes(basePlan)) {
+          await handlePlanPurchase(transaction.userId, basePlan, credits, durationDays);
+        } else {
+          // CUSTOM plan credit addition (no expiry or activePlan change)
+          await Credits.findOneAndUpdate(
+            { userId: transaction.userId },
+            { $inc: { credits }, $set: { lastUpdated: new Date() } },
+            { upsert: true }
+          );
         }
 
-        await Credits.findOneAndUpdate(
-          { userId: transaction.userId },
-          updateData,
-          { upsert: true }
-        );
+        const escapeMarkdownV2 = (text) => (text || '').replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+        const tgSuccessMsg = `*SabPaisa Payment Successful*\n\n` +
+          `*Name:* ${escapeMarkdownV2(responseMap['payerName'])}\n` +
+          `*Email:* ${escapeMarkdownV2(responseMap['payerEmail'])}\n` +
+          `*Mobile:* ${escapeMarkdownV2(responseMap['payerMobile'])}\n` +
+          `*Amount:* ₹${escapeMarkdownV2(txnAmount.toString())}\n` +
+          '*Payment Method:* SABPAISA \n' +
+          `*Status:* ${escapeMarkdownV2(finalStatus)}\n` +
+          `*Status Code:* ${escapeMarkdownV2(statusCode)}\n` +
+          `*ClientTxnId:* ${escapeMarkdownV2(clientTxnId)}\n` +
+          `*SabPaisaTxnId:* ${escapeMarkdownV2(responseMap['sabpaisaTxnId'] || 'N/A')}`;
+
+        await sendTelegramAlert(tgSuccessMsg, TELEGRAM_GROUP_ID_SUCCESS);
+      }
+
+      if (['FAILED', 'NOT_COMPLETED', 'ABORTED', 'UNKNOWN'].includes(finalStatus)) {
+        const escapeMarkdownV2 = (text) => (text || '').replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+        const tgFailMsg = `*SabPaisa Payment Failed*\n\n` +
+          `*Name:* ${escapeMarkdownV2(responseMap['payerName'])}\n` +
+          `*Email:* ${escapeMarkdownV2(responseMap['payerEmail'])}\n` +
+          `*Mobile:* ${escapeMarkdownV2(responseMap['payerMobile'])}\n` +
+          `*Amount:* ₹${escapeMarkdownV2(txnAmount.toString())}\n` +
+          '*Payment Method:* SABPAISA \n' +
+          `*Status:* ${escapeMarkdownV2(finalStatus)}\n` +
+          `*Status Code:* ${escapeMarkdownV2(statusCode)}\n` +
+          `*ClientTxnId:* ${escapeMarkdownV2(clientTxnId)}\n` +
+          `*SabPaisaTxnId:* ${escapeMarkdownV2(responseMap['sabpaisaTxnId'] || 'N/A')}`;
+
+        await sendTelegramAlert(tgFailMsg, TELEGRAM_GROUP_ID_FAILURE);
       }
 
       return res.redirect(
-        `https://app.leadcourt.com/subscription/balance/?status=${finalStatus}&txnId=${responseMap['sabpaisaTxnId'] || ''}&amount=${txnAmount}`
+        finalStatus === 'COMPLETED'
+          ? `https://app.leadcourt.com/subscription/balance?status=success&method=SPS`
+          : `https://app.leadcourt.com/subscription?status=failed&method=SPS`
       );
+
     } catch (err) {
       console.error('SabPaisa Return Error:', err);
       return res.status(500).send('Internal Server Error');
     }
   }
 
-  return res.redirect('https://leadcourt.com');
+  return res.redirect('https://app.leadcourt.com/subscription/balance');
+};
+
+exports.handleSabPaisaWebhook = async (req, res) => {
+  try {
+    const encryptedResponse = req.body.encryptedResponse;
+    if (!encryptedResponse) return res.status(400).send('Missing encryptedResponse');
+
+    const decrypted = decrypt(encryptedResponse);
+    console.log('Webhook received from SabPaisa');
+    console.log('Decrypted:', decrypted);
+
+    const responseMap = {};
+    decrypted.split('&').forEach(pair => {
+      const [key, value] = pair.split('=');
+      responseMap[key] = value;
+    });
+
+    const statusCode = responseMap['statusCode'];
+    const txnAmount = responseMap['amount'];
+    const clientTxnId = responseMap['clientTxnId'];
+
+    let finalStatus = 'UNKNOWN';
+    switch (statusCode) {
+      case '0000': finalStatus = 'COMPLETED'; break;
+      case '0300': finalStatus = 'FAILED'; break;
+      case '0100': finalStatus = 'NOT_COMPLETED'; break;
+      case '0200': finalStatus = 'ABORTED'; break;
+    }
+
+    if (['FAILED', 'NOT_COMPLETED', 'ABORTED', 'UNKNOWN'].includes(finalStatus)) {
+      await sendSabPaisaFailureAlert(finalStatus, {
+        name: responseMap['payerName'],
+        email: responseMap['payerEmail'],
+        mobile: responseMap['payerMobile'],
+        amount: txnAmount,
+        statusCode,
+        clientTxnId,
+        sabPaisaTxnId: responseMap['sabpaisaTxnId'] || 'N/A'
+      });
+    }
+
+    res.status(200).json({
+      status: 200,
+      message: "API_SUCCESSFULL_MESSAGE",
+      data: {
+        statusCode: "01",
+        message: "Data successfully processed",
+        sabpaisaTxnId: responseMap['sabpaisaTxnId'] || 'N/A'
+      },
+      errors: "null"
+    });
+
+  } catch (err) {
+    console.error('Webhook handling failed:', err);
+    res.status(500).send('Internal Server Error');
+  }
 };
