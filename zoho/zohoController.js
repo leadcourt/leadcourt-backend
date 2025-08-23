@@ -199,3 +199,19 @@ exports.checkZohoConnection = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+
+
+//Remove Hubspot Connection
+exports.removeHubspotConnection = async (req, res) => {
+  const { uid: userId } = req.user;
+  if (!userId) return res.status(400).json({ error: 'Missing userId' });
+
+  try {
+    await ZohoModel.findByIdAndDelete(userId);
+    return res.json({ success: true, message: 'Zoho connection removed' });
+  } catch (err) {
+    console.error('Remove connection failed:', err.message);
+    return res.status(500).json({ error: 'Failed to remove Zoho connection' });
+  }
+};

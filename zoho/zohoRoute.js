@@ -13,8 +13,9 @@ router.post('/exchange-code', authenticateJWT, zohoController.exchangeZohoAuthCo
 
 router.post('/export', authenticateJWT, zohoController.exportToZoho);
 
-
 router.get('/check', authenticateJWT, zohoController.checkZohoConnection);
+
+router.get('/delete', authenticateJWT, zohoController.removeHubspotConnection);
 
 module.exports = router;
 
