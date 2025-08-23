@@ -49,6 +49,6 @@ build/
 *.gz
 *.bak
 *.txt
-
+*key
 
 core

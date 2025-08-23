@@ -176,6 +176,9 @@ exports.checkZohoConnection = async (req, res) => {
   try {
     const Zoho = await ZohoModel.findById(req.user.id);
 
+    console.log('req.user.id', req.user.id)
+    console.log('Zoho', Zoho)
+
     if (!Zoho?.refresh_token) {
       return res.json({ connected: false, reason: "no_token" });
     }
